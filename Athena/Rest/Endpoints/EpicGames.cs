@@ -17,6 +17,7 @@ public class EpicGamesEnpoints(RestClient client) : RestBase(client)
             request.Method, response.StatusDescription, (int)response.StatusCode, request.Resource);
 
         if (response is null || !response.IsSuccessful || string.IsNullOrEmpty(response.Content)) return null;
+
         return response.Data;
     }
 

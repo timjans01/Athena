@@ -117,7 +117,7 @@ public class Dataminer
 
     public async Task Initialize(List<string> notices)
     {
-        _notices.AddRange(notices);
+        //_notices.AddRange(notices);ed
         _manifestService = new();
         Provider = new(string.Empty, true, new VersionContainer(EGame.GAME_UE5_LATEST));
 
@@ -140,8 +140,8 @@ public class Dataminer
         {
             // this is pretty funny because we dont even check if the auth response is valid
             var auth = await APIEndpoints.Epic.CreateAuthAsync();
+            Log.Information("Created auth token: {token}", auth?.access_token);
             Config.config.accessToken = auth?.access_token!;
-            Config.Save();
         }
     }
 
@@ -163,6 +163,10 @@ public class Dataminer
             Helper.ExitThread(1);
             return;
         }
+
+        //log manifest
+
+
 
         await _manifestService.DownloadManifest(manifest);
         Log.Information("Downloaded manifest {id} ({ver})",
@@ -233,7 +237,7 @@ public class Dataminer
         }
 
         Log.ForContext("NoConsole", true).Information("User selected {0}", model);
-        await SelectMode(model);
+        await SelectMode(Model.ProfileAthena);
     }
 
     private async Task SelectMode(Model model)
@@ -286,7 +290,7 @@ public class Dataminer
         }
 
         Log.ForContext("NoConsole", true).Information("User selected {0}", action);
-        await ProcessRequest(model, action);
+        await ProcessRequest(Model.ProfileAthena, Actions.AddEverything);
     }
 
     private async Task ProcessRequest(Model model, Actions action)
@@ -510,7 +514,7 @@ public class Dataminer
         _itemsFilter.Clear();
         _backupName = string.Empty;
         _currentGenerationType = string.Empty;
-        await ShowMenu();
+        await ProcessRequest(Model.ProfileAthena, Actions.AddEverything);
     }
 
     private void LoadAllEntries(Func<IAesVfsReader, bool> readers, bool global = false, bool isCustom = false)

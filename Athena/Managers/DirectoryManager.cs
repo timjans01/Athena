@@ -5,12 +5,12 @@ namespace Athena.Managers;
 public static class DirectoryManager
 {
     public static string Current = Environment.CurrentDirectory;
-    public static string Settings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Athena");
-    public static string Logs = Path.Combine(Current, ".logs");
-    public static string ChunksDir = Path.Combine(Current, ".data");
-    public static string Profiles = Path.Combine(Current, ".profiles"); // not really needed
-    public static string MappingsDir = Path.Combine(ChunksDir, ".mappings");
-    public static string BackupsDir = Path.Combine(ChunksDir, ".backups");
+    public static string Settings = Path.Combine(Current, "Athena");
+    public static string Logs = Path.Combine(Current, "logs");
+    public static string ChunksDir = Path.Combine(Current, "data");
+    public static string Profiles = Path.Combine(Current, "profiles"); // not really needed
+    public static string MappingsDir = Path.Combine(ChunksDir, "mappings");
+    public static string BackupsDir = Path.Combine(ChunksDir, "backups");
     public static string UpdaterFile = Path.Combine(ChunksDir, "AthenaUpdater.exe");
 
     private static string[] _prohibitedDirs = [

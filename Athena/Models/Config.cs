@@ -19,43 +19,7 @@ public class Config
 
         if (!File.Exists(Path.Combine(DirectoryManager.Settings, "settings.json")))
         {
-            // name for the loadout
-            config.athenaProfileId = AnsiConsole.Ask<string>("Insert the [62]name[/] to use for the [62]Profile-Athena[/]:");
-
-            // ask the path where the profile will be saved
-            profileSaveQuestion:
-            string profileSavePath = AnsiConsole.Ask<string>("Insert the [62]path[/] to use for save the [62]Profile-Athena[/] (type [62]d[/] for use the default one):");
-            if (profileSavePath == "d")
-            {
-                config.profileDirectory = DirectoryManager.Profiles;
-            }
-            else
-            {
-                if (!Directory.Exists(profileSavePath))
-                {
-                    Log.Error("The directory you inserted does not exists.");
-                    goto profileSaveQuestion;
-                }
-                config.profileDirectory = profileSavePath;
-            }
-
-            // ask the path where the shop will be saved
-            shopSaveQuestion:
-            string shopSavePath = AnsiConsole.Ask<string>("Insert the [62]path[/] to use for save the [62]catalog[/] (type [62]d[/] for use the default one):");
-            if (shopSavePath == "d")
-            {
-                config.shopDirectory = DirectoryManager.Profiles;
-            }
-            else
-            {
-                if (!Directory.Exists(shopSavePath))
-                {
-                    Log.Error("The directory you inserted not exists.");
-                    goto shopSaveQuestion;
-                }
-                config.shopDirectory = shopSavePath;
-            }
-            // save settings
+            // Save the default settings
             Save();
         }
         else
