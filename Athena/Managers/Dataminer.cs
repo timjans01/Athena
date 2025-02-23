@@ -295,7 +295,7 @@ public class Dataminer
         await ProcessRequest(Model.ProfileAthena, Actions.AddEverything);
     }
 
-    private async Task ProcessRequest(Model model, Actions action)
+    public async Task ProcessRequest(Model model, Actions action)
     {
         var start = Stopwatch.StartNew();
         DiscordRichPresence.Update($"Generating {_currentGenerationType}.");
@@ -530,30 +530,58 @@ public class Dataminer
     private void LoadAllEntries(Func<IAesVfsReader, bool> readers, bool global = false, bool isCustom = false)
     {
         var start = Stopwatch.StartNew();
-
         int total = 0;
-        foreach (var reader in Provider.MountedVfs.Where(readers))
+
+        var excludedExtensions = new HashSet<string> { ".uexp", ".ubulk", ".uptnl", ".umap", ".ini", ".locres", ".uplugin" };
+
+        var globalEntries = new ConcurrentBag<VfsEntry>();
+        var customEntries = new ConcurrentBag<VfsEntry>();
+
+        var readersList = Provider.MountedVfs.ToList();
+
+        Parallel.ForEach(Partitioner.Create(0, readersList.Count), new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, range =>
         {
-            foreach (var value in reader.Files.Values)
+            var localGlobalEntries = new List<VfsEntry>();
+            var localCustomEntries = new List<VfsEntry>();
+            int localTotal = 0;
+
+            for (int i = range.Item1; i < range.Item2; i++)
             {
-                if (value is not VfsEntry entry || entry.Path.EndsWith(".uexp") || 
-                    entry.Path.EndsWith(".ubulk") || entry.Path.EndsWith(".uptnl") ||
-                    entry.Path.EndsWith(".umap") || entry.Path.EndsWith(".ini") ||
-                    entry.Path.EndsWith(".locres") || entry.Path.EndsWith(".uplugin")) 
-                    continue;
+                var reader = readersList[i];
+                if (!readers(reader)) continue;
 
-                if (global) _allEntries.Add(entry); // used for filter new files
-                else if (isCustom) // used for filter only selected assets
+                foreach (var file in reader.Files.Values)
                 {
-                    if (!_itemsFilter.Contains(entry.NameWithoutExtension.ToLower()))
-                        continue;
-                    _newEntries.Add(entry);
-                }
-                else _newEntries.Add(entry);
+                    if (file is not VfsEntry entry) continue;
 
-                total++;
+                    // Check if file extension is in the gashset
+                    string ext = Path.GetExtension(entry.Path);
+                    if (excludedExtensions.Contains(ext)) continue;
+
+                    if (global)
+                        localGlobalEntries.Add(entry);
+                    else if (isCustom)
+                    {
+                        if (!_itemsFilter.Contains(entry.NameWithoutExtension.ToLower())) continue;
+                        localCustomEntries.Add(entry);
+                    }
+                    else
+                        localCustomEntries.Add(entry);
+
+                    localTotal++;
+                }
             }
-        }
+
+            foreach (var entry in localGlobalEntries) globalEntries.Add(entry);
+            foreach (var entry in localCustomEntries) customEntries.Add(entry);
+            Interlocked.Add(ref total, localTotal);
+        });
+
+        // Merge results back into the normal enrties
+        if (global)
+            _allEntries.AddRange(globalEntries);
+        else
+            _newEntries.AddRange(customEntries);
 
         start.Stop();
         Log.Information("Loaded {tot_assets} VfsEntries in {tot}s ({ms}ms).", total, start.Elapsed.Seconds, Math.Round(start.Elapsed.TotalMilliseconds));

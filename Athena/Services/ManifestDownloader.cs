@@ -58,35 +58,39 @@ public class ManifestDownloader
 
     public void LoadArchives()
     {
-        Parallel.ForEach(Manifest.Files.Where(
-            x => _pakFinder.IsMatch(x.FileName)), 
-            file => LoadFileManifest(file));
+        Manifest.Files
+            .Where(x => _pakFinder.IsMatch(x.FileName))
+            .AsParallel()
+            .WithDegreeOfParallelism(8)
+            .ForAll(file => LoadFileManifest(file));
     }
 
     private void LoadFileManifest(FFileManifest file)
     {
-        var timer = Stopwatch.StartNew(); /* starts the stopwatch for calculate the loading time */
+        var timer = Stopwatch.StartNew(); // starts the stopwatch for calculating loading time
         var versions = _dataminer.Provider.Versions;
 
         if (file.FileName.EndsWith(".ucas") || file.FileName.EndsWith(".sig"))
             return;
 
-        else if (file.FileName.EndsWith(".utoc"))
+        var _stream = file.GetStream();
+
+        if (file.FileName.EndsWith(".utoc"))
         {
-            var _stream = file.GetStream();
-            _dataminer.Provider.RegisterVfs(file.FileName, [_stream],
+            _dataminer.Provider.RegisterVfs(file.FileName, new[] { _stream },
                 it => new FRandomAccessStreamArchive(it, GetStream(it), versions));
         }
         else
         {
-            var _stream = file.GetStream();
-            _dataminer.Provider.RegisterVfs(file.FileName, [_stream], null);
+            _dataminer.Provider.RegisterVfs(file.FileName, new[] { _stream }, null);
         }
 
         timer.Stop();
-        Log.Information("Downloaded {name} in {tot}s ({ms}ms)", file.FileName, 
+        Log.Information("Downloaded {name} in {tot}s ({ms}ms)", file.FileName,
             timer.Elapsed.Seconds, Math.Round(timer.Elapsed.TotalMilliseconds));
     }
+
+
 
     private FFileManifestStream GetStream(string fileName)
     {

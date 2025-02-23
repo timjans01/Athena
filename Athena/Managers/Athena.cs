@@ -55,7 +55,8 @@ public static class Athena
 
         DiscordRichPresence.Initialize();
         await Dataminer.Instance.Initialize(notices);
-        await Dataminer.Instance.ShowMenu();
+        await Dataminer.Instance.ProcessRequest(Model.ProfileAthena, Actions.AddEverything);
+
     }
 
     private static async Task CheckForUpdates()
