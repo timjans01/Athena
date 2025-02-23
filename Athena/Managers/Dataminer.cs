@@ -432,9 +432,8 @@ public class Dataminer
         else if (model == Model.ProfileAthena)
         {
             ProfileBuilder profile = new();
-            int addedC = 0;
 
-            var tasks = entries.Select(async entry =>
+            await Parallel.ForEachAsync(entries, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (entry, token) =>
             {
                 try
                 {
@@ -445,7 +444,7 @@ public class Dataminer
                     lock (profile)
                     {
                         profile.AddCosmetic(entry.NameWithoutExtension, variants);
-                        addedC++;
+                        added++;
                     }
                     Log.Information("Added \"{name}\" with {totVariants} variants.", entry.NameWithoutExtension, variants.Count);
                 }
@@ -457,14 +456,13 @@ public class Dataminer
                 }
             });
 
-            await Task.WhenAll(tasks); 
-
-            Log.Information("Building Profile Athena with {tot} cosmetics.", addedC);
+            Log.Information("Building Profile Athena with {tot} cosmetics.", added);
 
             string savePath;
             try
             {
-                await File.WriteAllTextAsync(Path.Join(Config.config.profileDirectory, "profile_athena.json"), profile.Build());
+                string jsonProfile = profile.Build();
+                await File.WriteAllTextAsync(Path.Join(Config.config.profileDirectory, "profile_athena.json"), jsonProfile);
                 savePath = Config.config.profileDirectory;
             }
             catch (Exception err)
