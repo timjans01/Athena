@@ -15,6 +15,8 @@ using CUE4Parse.UE4.Objects.Core.Misc;
 using Athena.Rest;
 using Athena.Models;
 using Athena.Services;
+using static Athena.Models.ProfileAthena;
+using System.Collections.Concurrent;
 
 namespace Athena.Managers;
 
@@ -430,17 +432,22 @@ public class Dataminer
         else if (model == Model.ProfileAthena)
         {
             ProfileBuilder profile = new();
-            foreach (var entry in entries)
+            int addedC = 0;
+
+            var tasks = entries.Select(async entry =>
             {
                 try
                 {
                     var export = await Provider.LoadObjectAsync(entry.PathWithoutExtension + '.' + entry.NameWithoutExtension);
-                    if (!_classes.Contains(export.ExportType)) continue; // this will prevent issues trust
+                    if (!_classes.Contains(export.ExportType)) return;
 
                     var variants = Helper.GetAllVariants(export);
-                    profile.AddCosmetic(entry.NameWithoutExtension, variants);
-                    Log.Information("Added \"{name}\" with {totVariants} channels variants.", entry.NameWithoutExtension, variants.Count);
-                    added++;
+                    lock (profile)
+                    {
+                        profile.AddCosmetic(entry.NameWithoutExtension, variants);
+                        addedC++;
+                    }
+                    Log.Information("Added \"{name}\" with {totVariants} variants.", entry.NameWithoutExtension, variants.Count);
                 }
                 catch (Exception e)
                 {
@@ -448,23 +455,28 @@ public class Dataminer
                     Log.Error("Skipped entry {name}: {err}.", entry.Name, e.Message);
 #endif
                 }
-            }
+            });
 
-            Log.Information("Building Profile Athena with {tot} cosmetics.", added);
+            await Task.WhenAll(tasks); 
+
+            Log.Information("Building Profile Athena with {tot} cosmetics.", addedC);
+
             string savePath;
             try
             {
                 await File.WriteAllTextAsync(Path.Join(Config.config.profileDirectory, "profile_athena.json"), profile.Build());
                 savePath = Config.config.profileDirectory;
             }
-            catch (Exception err) // sometimes the path dont accept characters like . or -
+            catch (Exception err)
             {
-                Log.Warning("An error has occurred while saving the profile: {err}. Saving in default directory (.profiles).", err.Message);
+                Log.Warning("Error saving profile: {err}. Saving in default directory (.profiles).", err.Message);
                 await File.WriteAllTextAsync(Path.Join(DirectoryManager.Profiles, "profile_athena.json"), profile.Build());
                 savePath = DirectoryManager.Profiles;
             }
+
             Log.Information("Saved Profile Athena for {name} in {path}.", Config.config.athenaProfileId, savePath);
         }
+
 
         return true;
     }
